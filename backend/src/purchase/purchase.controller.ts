@@ -1,31 +1,33 @@
-import { Controller, Post, Body, Headers, UseGuards } from '@nestjs/common';
-import { PurchaseService } from './purchase.service';
-import { AuthGuard } from '../auth/auth.guard';
+import { Controller, Post, Body, Headers, UseGuards } from "@nestjs/common";
+import { PurchaseService } from "./purchase.service";
+import { AuthGuard } from "../auth/auth.guard";
+import { CreatePurchaseDto } from "./dto";
+import { ApiBearerAuth, ApiBody, ApiResponse, ApiTags } from "@nestjs/swagger";
 
-@Controller('purchase')
-@UseGuards(AuthGuard)
+@ApiTags("Purchases")
+@Controller("purchase")
 export class PurchaseController {
-  constructor(private readonly purchaseService: PurchaseService) {}
+	constructor(private readonly purchaseService: PurchaseService) {}
 
-  @Post()
-  async createPurchase(
-    @Body() data: any,
-    @Headers('x-payload-signature') signature: string,
-    @Headers('authorization') authHeader: string
-  ) {
-    // Extrair user ID do token JWT
-    const userId = this.extractUserIdFromToken(authHeader);
-    
-    return this.purchaseService.processPurchase(
-      userId,
-      { ...data, timestamp: Date.now() }, // Adiciona timestamp
-      signature
-    );
-  }
+	@Post()
+	@UseGuards(AuthGuard)
+	@ApiBearerAuth()
+	@ApiBody({ type: CreatePurchaseDto })
+	@ApiResponse({ status: 201, description: "Purchase created successfully" })
+	async createPurchase(
+		@Body() createPurchaseDto: CreatePurchaseDto,
+		@Headers("authorization") authHeader: string
+	) {
+		const userId = this.extractUserIdFromToken(authHeader);
+		return this.purchaseService.processPurchase(userId, createPurchaseDto);
+	}
 
-  private extractUserIdFromToken(authHeader: string): number {
-    const token = authHeader.split(' ')[1];
-    const payload = JSON.parse(Buffer.from(token.split('.')[1], 'base64').toString());
-    return payload.sub;
-  }
+	private extractUserIdFromToken(authHeader: string): string {
+		// Alterado para string
+		const token = authHeader.split(" ")[1];
+		const payload = JSON.parse(
+			Buffer.from(token.split(".")[1], "base64").toString()
+		);
+		return payload.sub.toString(); // Convertendo para string
+	}
 }

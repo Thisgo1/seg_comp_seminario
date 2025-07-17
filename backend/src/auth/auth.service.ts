@@ -109,7 +109,7 @@ export class AuthService {
 	 * @param userId ID do usuário
 	 * @param publicKey Chave pública em formato PEM
 	 */
-	async registerPublicKey(userId: number, publicKey: string) {
+	async registerPublicKey(userId: string, publicKey: string) {
 		// Criptografa a chave antes de armazenar (usando extensão pgcrypto)
 		await this.prisma.$executeRaw`
       INSERT INTO public_keys (user_id, public_key, algorithm)

@@ -1,4 +1,4 @@
 export class RegisterKeyDto {
-  userId: number;
+  userId: string;
   publicKey: string;
 }

@@ -3,7 +3,7 @@ CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
 -- CreateTable
 CREATE TABLE "User" (
-    "id" SERIAL NOT NULL,
+    "id" TEXT NOT NULL,
     "email" TEXT NOT NULL,
     "password" TEXT NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -14,12 +14,12 @@ CREATE TABLE "User" (
 
 -- CreateTable
 CREATE TABLE "PublicKey" (
-    "id" SERIAL NOT NULL,
+    "id" TEXT NOT NULL,
     "key" TEXT NOT NULL,
     "algorithm" TEXT NOT NULL DEFAULT 'ES256',
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "expiresAt" TIMESTAMP(3) NOT NULL,
-    "userId" INTEGER NOT NULL,
+    "userId" TEXT NOT NULL,
 
     CONSTRAINT "PublicKey_pkey" PRIMARY KEY ("id")
 );
@@ -27,7 +27,7 @@ CREATE TABLE "PublicKey" (
 -- CreateTable
 CREATE TABLE "Session" (
     "id" TEXT NOT NULL,
-    "userId" INTEGER NOT NULL,
+    "userId" TEXT NOT NULL,
     "refreshToken" TEXT NOT NULL,
     "ipAddress" TEXT,
     "userAgent" TEXT,
@@ -39,22 +39,22 @@ CREATE TABLE "Session" (
 
 -- CreateTable
 CREATE TABLE "Purchase" (
-    "id" SERIAL NOT NULL,
+    "id" TEXT NOT NULL,
     "amount" DOUBLE PRECISION NOT NULL,
     "items" JSONB NOT NULL,
     "signature" TEXT NOT NULL,
     "status" TEXT NOT NULL DEFAULT 'pending',
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "userId" INTEGER NOT NULL,
+    "userId" TEXT NOT NULL,
 
     CONSTRAINT "Purchase_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
 CREATE TABLE "AuditLog" (
-    "id" SERIAL NOT NULL,
+    "id" TEXT NOT NULL,
     "action" TEXT NOT NULL,
-    "userId" INTEGER,
+    "userId" TEXT,
     "ipAddress" TEXT,
     "userAgent" TEXT,
     "metadata" JSONB,
@@ -71,6 +71,9 @@ CREATE UNIQUE INDEX "PublicKey_userId_key" ON "PublicKey"("userId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "Session_refreshToken_key" ON "Session"("refreshToken");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "Purchase_userId_key" ON "Purchase"("userId");
 
 -- AddForeignKey
 ALTER TABLE "PublicKey" ADD CONSTRAINT "PublicKey_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;

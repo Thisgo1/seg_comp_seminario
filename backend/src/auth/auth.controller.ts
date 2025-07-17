@@ -8,13 +8,13 @@ import { Response } from "express";
 export class AuthController {
 	constructor(private readonly authService: AuthService) {}
 
-	@Post('register')
-  async register(@Body() registerUserDto: RegisterUserDto) {
-    return this.authService.register({
-      ...registerUserDto,
-      ipAddress: registerUserDto.ipAddress || 'unknown' // Pode pegar do request real
-    });
-  }
+	@Post("register")
+	async register(@Body() registerUserDto: RegisterUserDto) {
+		return this.authService.register({
+			...registerUserDto,
+			ipAddress: registerUserDto.ipAddress || "unknown", // Pode pegar do request real
+		});
+	}
 
 	@Post("login")
 	async login(
@@ -33,13 +33,16 @@ export class AuthController {
 			sameSite: "strict",
 		});
 
-		return { access_token: tokens.access_token };
+		return {
+			access_token: tokens.access_token,
+			refresh_token: tokens.refresh_token,
+		};
 	}
 
 	@Post("register-key")
 	async registerPublicKey(@Body() registerKeyDto: RegisterKeyDto) {
 		return this.authService.registerPublicKey(
-			registerKeyDto.userId,
+			registerKeyDto.userId, // Já é string (conforme seu DTO)
 			registerKeyDto.publicKey
 		);
 	}
