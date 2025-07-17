@@ -1,0 +1,76 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"] 
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  extensions = [pgcrypto]
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  password  String   // Armazenar apenas o hash (bcrypt)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  publicKey PublicKey? // Relação 1:1 opcional
+
+  // Relações
+  purchases Purchase[]
+  sessions  Session[]
+}
+
+model PublicKey {
+  id        Int      @id @default(autoincrement())
+  key       String   @db.Text // Chave pública em formato PEM
+  algorithm String   @default("ES256")
+  createdAt DateTime @default(now())
+  expiresAt DateTime // Validade da chave (ex: 90 dias)
+
+  // Relação com usuário
+  user   User @relation(fields: [userId], references: [id])
+  userId Int  @unique
+}
+
+model Session {
+  id           String   @id @default(uuid())
+  user         User     @relation(fields: [userId], references: [id])
+  userId       Int
+  refreshToken String   @unique
+  ipAddress    String?
+  userAgent    String?
+  createdAt    DateTime @default(now())
+  expiresAt    DateTime // Típicamente 7 dias
+}
+
+model Purchase {
+  id        Int      @id @default(autoincrement())
+  amount    Float
+  items     Json     // Detalhes dos itens comprados
+  signature String   // Assinatura digital da transação
+  status    String   @default("pending") // pending/completed/failed
+  createdAt DateTime @default(now())
+
+  // Relação com usuário
+  user   User @relation(fields: [userId], references: [id])
+  userId Int
+}
+
+// Tabela de auditoria para logs de segurança
+model AuditLog {
+  id        Int      @id @default(autoincrement())
+  action    String   // Ex: "LOGIN", "PURCHASE", "KEY_ROTATION"
+  userId    Int?
+  ipAddress String?
+  userAgent String?
+  metadata  Json?    // Dados adicionais
+  createdAt DateTime @default(now())
+}
