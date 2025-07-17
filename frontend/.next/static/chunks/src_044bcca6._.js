@@ -5,87 +5,231 @@
 
 var { g: global, __dirname, k: __turbopack_refresh__, m: module } = __turbopack_context__;
 {
-// src/services/api.ts
 __turbopack_context__.s({
-    "apiService": (()=>apiService),
-    "default": (()=>__TURBOPACK__default__export__)
+    "api": (()=>api)
 });
 var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$build$2f$polyfills$2f$process$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/node_modules/next/dist/build/polyfills/process.js [app-client] (ecmascript)");
-var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$axios$2f$lib$2f$axios$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/node_modules/axios/lib/axios.js [app-client] (ecmascript)");
-;
-// Configuração base do Axios
-const api = __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$axios$2f$lib$2f$axios$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"].create({
-    baseURL: __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$build$2f$polyfills$2f$process$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"].env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api",
-    headers: {
-        "Content-Type": "application/json"
-    }
-});
-function getCSRFToken() {
-    const name = "XSRF-TOKEN=";
-    const decodedCookie = decodeURIComponent(document.cookie);
-    const cookieArray = decodedCookie.split(";");
-    for(let i = 0; i < cookieArray.length; i++){
-        let cookie = cookieArray[i];
-        while(cookie.charAt(0) === " "){
-            cookie = cookie.substring(1);
+const API_BASE_URL = __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$build$2f$polyfills$2f$process$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"].env.NEXT_PUBLIC_API_URL || "http://localhost:3333";
+const PROVIDER_URLS = {
+    brazilian: "http://616d6bdb6dacbb001794ca17.mockapi.io/devnology/brazilian_provider",
+    european: "http://616d6bdb6dacbb001794ca17.mockapi.io/devnology/european_provider"
+};
+const authFetch = async (url, options = {}, token)=>{
+    const headers = {
+        "Content-Type": "application/json",
+        ...token && {
+            Authorization: `Bearer ${token}`
+        },
+        ...options.headers
+    };
+    try {
+        const res = await fetch(`${API_BASE_URL}${url}`, {
+            ...options,
+            headers,
+            credentials: "include"
+        });
+        // Tratamento especial para status 401 (não autorizado)
+        if (res.status === 401) {
+            localStorage.removeItem("token");
+            throw new Error("Não autorizado - sessão expirada");
         }
-        if (cookie.indexOf(name) === 0) {
-            return cookie.substring(name.length, cookie.length);
+        if (!res.ok) {
+            const errorData = await res.json().catch(()=>({}));
+            const errorMessage = errorData.message || `Erro ${res.status} na requisição`;
+            throw new Error(errorMessage);
         }
-    }
-    return "";
-}
-api.interceptors.request.use(async (config)=>{
-    if ([
-        'post',
-        'put',
-        'patch',
-        'delete'
-    ].includes(config.method?.toLowerCase() || '')) {
-        // Tenta obter o token CSRF do cookie
-        const csrfToken = document.cookie.split('; ').find((row)=>row.startsWith('XSRF-TOKEN='))?.split('=')[1];
-        if (csrfToken) {
-            config.headers['X-CSRF-TOKEN'] = csrfToken;
-        } else {
-            // Se não tiver cookie, faz uma requisição para obter o token
-            const { data } = await api.get('/csrf/token');
-            config.headers['X-CSRF-TOKEN'] = data.csrfToken;
-        }
-    }
-    return config;
-});
-// Interceptor para tratamento de erros
-api.interceptors.response.use((response)=>response, async (error)=>{
-    if (error.response?.status === 403 && error.response.data.message === 'Invalid CSRF Token') {
-        // Token CSRF inválido - obtém um novo e repete a requisição
-        const { data } = await api.get('/csrf/token');
-        error.config.headers['X-CSRF-TOKEN'] = data.csrfToken;
-        return api.request(error.config);
-    }
-    return Promise.reject(error);
-});
-const apiService = {
-    // Autenticação
-    async register (userData) {
-        const response = await api.post("/auth/register", userData);
-        return response.data;
-    },
-    async login (credentials) {
-        const response = await api.post("/auth/login", credentials);
-        return response.data; // Tokens estarão em cookies HttpOnly
-    },
-    async logout () {
-        await api.post("/auth/logout");
-        // Redireciona após logout
-        window.location.href = "/login";
-    },
-    // Comprar item
-    async purchaseItem (itemData) {
-        const response = await api.post("/purchase", itemData);
-        return response.data;
+        return await res.json();
+    } catch (error) {
+        console.error(`Erro na requisição para ${url}:`, error);
+        throw error;
     }
 };
-const __TURBOPACK__default__export__ = api;
+const publicFetch = async (url)=>{
+    try {
+        const response = await fetch(url);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return await response.json();
+    } catch (error) {
+        console.error(`Fetch failed for ${url}:`, error);
+        throw new Error(`Failed to fetch data from ${url}`);
+    }
+};
+const api = {
+    // APIs dos providers
+    providers: {
+        getBrazilian: async ()=>{
+            return publicFetch(PROVIDER_URLS.brazilian);
+        },
+        getEuropean: async ()=>{
+            return publicFetch(PROVIDER_URLS.european);
+        },
+        getAll: async ()=>{
+            try {
+                const [brasilianProducts, europeanProducts] = await Promise.all([
+                    api.providers.getBrazilian(),
+                    api.providers.getEuropean()
+                ]);
+                const unified = [
+                    ...brasilianProducts.map((p)=>({
+                            id: p.id,
+                            name: p.nome,
+                            description: p.descricao,
+                            price: p.preco,
+                            image: p.imagem,
+                            provider: "BRASILIAN",
+                            material: p.material,
+                            category: p.categoria
+                        })),
+                    ...europeanProducts.map((p)=>({
+                            id: p.id,
+                            name: p.name,
+                            description: p.description,
+                            price: p.price,
+                            image: p.gallery[0] || "",
+                            provider: "EUROPEAN",
+                            hasDiscount: p.hasDiscount,
+                            discountValue: p.discountValue,
+                            material: p.details.material
+                        }))
+                ];
+                return unified;
+            } catch (error) {
+                console.error("Erro ao unificar produtos:", error);
+                throw error;
+            }
+        }
+    },
+    // Autenticação
+    auth: {
+        signup: async (userData)=>authFetch("/auth/signup", {
+                method: "POST",
+                body: JSON.stringify(userData)
+            }),
+        signin: async (credentials)=>authFetch("/auth/signin", {
+                method: "POST",
+                body: JSON.stringify(credentials)
+            }),
+        logout: async ()=>authFetch("/auth/logout", {
+                method: "POST"
+            })
+    },
+    // Usuário
+    user: {
+        getMe: async (token)=>authFetch("/users/me", {
+                method: "GET"
+            }, token),
+        update: async (dto, token)=>authFetch("/users", {
+                method: "PATCH",
+                body: JSON.stringify(dto)
+            }, token),
+        delete: async (token)=>authFetch("/users", {
+                method: "DELETE"
+            }, token)
+    },
+    // Endereços
+    addresses: {
+        getAll: async (token)=>authFetch("/addresses", {
+                method: "GET"
+            }, token),
+        getById: async (addressId, token)=>authFetch(`/addresses/${addressId}`, {
+                method: "GET"
+            }, token),
+        create: async (dto, token)=>authFetch("/addresses", {
+                method: "POST",
+                body: JSON.stringify(dto)
+            }, token),
+        update: async (addressId, dto, token)=>authFetch(`/addresses/${addressId}`, {
+                method: "PUT",
+                body: JSON.stringify(dto)
+            }, token),
+        delete: async (addressId, token)=>authFetch(`/addresses/${addressId}`, {
+                method: "DELETE"
+            }, token)
+    },
+    // Pedidos
+    orders: {
+        create: async (dto, token)=>authFetch("/orders", {
+                method: "POST",
+                body: JSON.stringify(dto)
+            }, token),
+        getAll: async (token)=>authFetch("/orders", {
+                method: "GET"
+            }, token),
+        getById: async (orderId, token)=>{
+            const order = await authFetch(`/orders/${orderId}`, {
+                method: "GET"
+            }, token);
+            return {
+                ...order,
+                items: order.items.map((item)=>({
+                        ...item,
+                        product: {
+                            id: item.productId,
+                            name: item.productName,
+                            price: item.price,
+                            imageUrl: item.productImage || "/placeholder-product.jpg"
+                        }
+                    }))
+            };
+        },
+        updateStatus: async (orderId, dto, token)=>authFetch(`/orders/${orderId}/status`, {
+                method: "PUT",
+                body: JSON.stringify(dto)
+            }, token),
+        cancel: async (orderId, token)=>authFetch(`/orders/${orderId}/cancel`, {
+                method: "PUT"
+            }, token)
+    },
+    // Produtos
+    products: {
+        getAll: async (page = 1, limit = 10, token)=>authFetch(`/products?page=${page}&limit=${limit}`, {
+                method: "GET"
+            }, token),
+        getById: async (provider, id1, token)=>authFetch(`/products/${provider}/${id1}`, {
+                method: "GET"
+            }, token),
+        search: async (query, token)=>authFetch(`/products/search?q=${query}`, {
+                method: "GET"
+            }, token),
+        getHistory: async (provider, id1, token)=>authFetch(`/products/${provider}/${id1}/history`, {
+                method: "GET"
+            }, token),
+        compare: async (orderItemId, token)=>authFetch(`/products/compare/${orderItemId}`, {
+                method: "GET"
+            }, token)
+    },
+    ratings: {
+        /**
+		 * Avalia um produto
+		 * @param productId ID do produto na API externa
+		 * @param provider Tipo do provedor (BRASILIAN/EUROPEAN)
+		 * @param dto Dados da avaliação
+		 * @param token JWT token
+		 */ rateProduct: async (productId, provider, dto, token)=>authFetch(`/products/${provider}/${id}/rate`, {
+                method: "POST",
+                body: JSON.stringify(dto)
+            }, token),
+        /**
+		 * Busca avaliações de um produto
+		 * @param productId ID do produto
+		 * @param provider Tipo do provedor
+		 * @param page Página atual (opcional)
+		 * @param limit Itens por página (opcional)
+		 * @param token JWT token (opcional para rotas públicas)
+		 */ getProductRatings: async (productId, provider, page = 1, limit = 10, token)=>authFetch(`/products/${provider}/${id}/ratings?page=${page}&limit=${limit}`, {
+                method: "GET"
+            }, token),
+        /**
+		 * Deleta uma avaliação do usuário
+		 * @param ratingId ID da avaliação
+		 * @param token JWT token
+		 */ deleteRating: async (ratingId, token)=>authFetch(`/ratings/${ratingId}`, {
+                method: "DELETE"
+            }, token)
+    }
+};
 if (typeof globalThis.$RefreshHelpers$ === 'object' && globalThis.$RefreshHelpers !== null) {
     __turbopack_context__.k.registerExports(module, globalThis.$RefreshHelpers$);
 }

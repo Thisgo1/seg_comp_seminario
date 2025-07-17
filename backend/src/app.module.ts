@@ -1,40 +1,33 @@
-import { NestFactory } from "@nestjs/core";
-import { AppModule } from "./app.module";
-import helmet from "helmet";
-import * as cookieParser from "cookie-parser";
-import { ValidationPipe } from "@nestjs/common";
-import { ThrottlerGuard } from "@nestjs/throttler";
+import { Module, MiddlewareConsumer } from '@nestjs/common'; // Adicione MiddlewareConsumer aqui
+import { ThrottlerModule } from '@nestjs/throttler';
+import { AppController } from './app.controller';
+import { PrismaModule } from './prisma/prisma.module';
+import { AuthModule } from './auth/auth.module';
+import { PurchaseModule } from './purchase/purchase.module';
+import { CryptoModule } from './crypto/crypto.module';
+import { CsrfMiddleware } from './security/csrf/csrf.middleware';
+import { CsrfController } from './security/csrf/csrf.controller';
+import { CsrfModule } from './security/csrf/csrf.module';
 
-async function bootstrap() {
-	const app = await NestFactory.create(AppModule);
-
-	// Middlewares de Segurança
-	app.use(helmet());
-	app.use(cookieParser());
-
-	// Validação global
-	app.useGlobalPipes(
-		new ValidationPipe({
-			whitelist: true, // Remove propriedades não declaradas nos DTOs
-			forbidNonWhitelisted: true, // Rejeita requisições com propriedades não declaradas
-			transform: true, // Transforma tipos automaticamente
-		})
-	);
-
-	// Configuração de CORS segura
-	app.enableCors({
-		origin: process.env.FRONTEND_URLS?.split(",") || true,
-		credentials: true,
-		methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-		allowedHeaders: [
-			"Content-Type",
-			"Authorization",
-			"X-CSRF-TOKEN",
-			"X-Requested-With",
-		],
-	});
-
-	await app.listen(process.env.PORT || 3001);
-	console.log(`Application running on port ${process.env.PORT || 3001}`);
+@Module({
+  imports: [
+    ThrottlerModule.forRoot([{
+      ttl: 60000,
+      limit: 100,
+    }]),
+    PrismaModule,
+    AuthModule,
+    PurchaseModule,
+    CryptoModule,
+    CsrfModule
+  ],
+  controllers: [AppController, CsrfController],
+  providers: [],
+})
+export class AppModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer
+      .apply(CsrfMiddleware)
+      .forRoutes('*'); // Aplica para todas as rotas
+  }
 }
-bootstrap();
