@@ -1,0 +1,34 @@
+// tsconfig.json
+{
+  "compilerOptions": {
+    "target": "es2022", // Ou "esnext"
+    "module": "ESNext", // Mude para ESNext para compatibilidade com Vite/ESM
+    "moduleResolution": "bundler", // Mude para "bundler" para compatibilidade com Vite
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "strict": true,
+    "skipLibCheck": true,
+    "jsx": "react-jsx", // Habilita o suporte a JSX
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "sourceMap": true,
+    "resolveJsonModule": true,
+
+    // --- ADIÇÕES PARA SHADCN/UI ---
+    "baseUrl": ".", // Define a base para a resolução de módulos
+    "paths": {
+      "@/*": [
+        "./src/*" // Mapeia @/ para a pasta src
+      ],
+      "@/components/*": [
+        "./src/components/*" // Mapeia @/components para src/components
+      ],
+      "@/lib/*": [
+        "./src/lib/*" // Mapeia @/lib para src/lib (onde utils.ts ficará)
+      ]
+    }
+    // --- FIM DAS ADIÇÕES ---
+  },
+  "include": ["src/**/*.ts", "src/**/*.tsx"], // Inclui arquivos .tsx
+  "exclude": ["node_modules"]
+}

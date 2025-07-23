@@ -1,0 +1,48 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+// prisma/schema.prisma
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String     @id @default(uuid())
+  email         String     @unique
+  password      String // Hashed password
+  publicKey     String // JWK format of the public key
+  privateKeyEnc String // CAMPO ADICIONADO: Encrypted private key (JWK format, stored as a string)
+  purchases     Purchase[]
+  auditLogs     AuditLog[]
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+}
+
+model Purchase {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  productId String
+  amount    Float
+  status    String // e.g., 'pending', 'completed', 'failed'
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String? // Can be null for actions not tied to a user (e.g., initial server start)
+  user      User?    @relation(fields: [userId], references: [id])
+  action    String // e.g., 'REGISTER', 'LOGIN', 'PURCHASE_ATTEMPT', 'PURCHASE_SUCCESS', 'SIGNATURE_INVALID'
+  details   String? // Additional info
+  ipAddress String?
+  timestamp DateTime @default(now())
+}
